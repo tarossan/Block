@@ -9,7 +9,7 @@
             text-align: center; font-family: 'Arial Black', sans-serif; 
             background: #000; color: #fff; margin: 0; 
             display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
-            touch-action: none; /* スマホのブラウザ操作（スクロール等）を無効化 */
+            touch-action: none; -webkit-user-select: none;
         }
         .status-bar { 
             font-size: 14px; padding: 5px; background: #222; border-bottom: 2px solid #444; 
@@ -17,52 +17,71 @@
         }
         .main-container {
             display: flex; justify-content: center; align-items: flex-start;
-            flex-grow: 1; padding: 5px; gap: 10px; overflow: hidden;
+            flex-grow: 1; padding: 5px; gap: 20px; overflow: hidden; position: relative;
         }
         canvas { 
             background: radial-gradient(circle, #111 0%, #000 100%);
             border: 2px solid #fff; border-radius: 5px;
             max-width: 100%; max-height: 85vh; cursor: crosshair; aspect-ratio: 960 / 1600;
+            touch-action: none;
         }
+        /* アイテムガイドの設定 */
         .item-guide {
-            width: 120px; background: #1a1a1a; padding: 8px;
-            border-radius: 5px; border: 1px solid #444; text-align: left;
-            font-family: sans-serif; font-size: 10px; line-height: 1.2;
-            display: none; /* スマホでは狭いのでガイドを隠す設定（必要なら消してください） */
+            width: 220px; background: #1a1a1a; padding: 15px;
+            border-radius: 10px; border: 2px solid #444; text-align: left;
+            font-family: sans-serif; font-size: 13px; line-height: 1.4;
         }
-        @media (min-width: 800px) { .item-guide { display: block; width: 220px; font-size: 12px; } .status-bar { font-size: 20px; } }
+        .item-row { display: flex; align-items: center; margin-bottom: 12px; }
+        .icon-box { width: 40px; height: 40px; margin-right: 12px; flex-shrink: 0; display:flex; align-items:center; justify-content:center; }
         
+        /* スマホ（画面幅が狭い時）はガイドを隠す */
+        @media (max-width: 800px) {
+            .item-guide { display: none; }
+            .status-bar { font-size: 12px; }
+        }
+        @media (min-width: 801px) {
+            .status-bar { font-size: 20px; padding: 10px; }
+        }
+
         #timer-box { margin-top: 10px; padding: 5px; background: #300; border: 1px solid #f00; border-radius: 3px; text-align: center; display: none; }
         #timer-val { font-size: 18px; color: #ff0; }
         
-        .heart-guide { position: relative; width: 12px; height: 12px; background: #f36; transform: rotate(-45deg); }
-        .heart-guide::before, .heart-guide::after { content: ""; width: 12px; height: 12px; background: #f36; border-radius: 50%; position: absolute; }
-        .heart-guide::before { top: -6px; left: 0; } .heart-guide::after { left: 6px; top: 0; }
+        .heart-guide { position: relative; width: 16px; height: 16px; background: #f36; transform: rotate(-45deg); }
+        .heart-guide::before, .heart-guide::after { content: ""; width: 16px; height: 16px; background: #f36; border-radius: 50%; position: absolute; }
+        .heart-guide::before { top: -8px; left: 0; } .heart-guide::after { left: 8px; top: 0; }
+        .missile-guide { width: 8px; height: 20px; background: #f00; position: relative; border-radius: 4px 4px 2px 2px; }
+        .missile-guide::before { content:""; position:absolute; top:-4px; left:0; width:8px; height:8px; background:#fff; border-radius:50% 50% 0 0; }
+        .homebase-guide { width: 24px; height: 18px; background: #f00; position: relative; border: 1px solid #fff; }
+        .homebase-guide::after { content: ""; position: absolute; bottom: -10px; left: -1px; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 10px solid #f00; }
     </style>
 </head>
 <body>
     <div class="status-bar">
-        <div>STG: <span id="stage">1</span></div>
+        <div>STAGE: <span id="stage">1</span></div>
         <div>LIFE: <span id="lives" style="color: #ff3366;">3</span></div>
-        <div>BALL: <span id="ball-count">1</span></div>
-        <div>SPD: <span id="speed-level" style="color: #ffcc00;">3</span> <span id="debug-label" style="color:red; display:none;">(D)</span></div>
-        <div>MSL: <span id="m-stock" style="color: #ffcc00;">0</span></div>
+        <div>BALLS: <span id="ball-count">1</span>/9</div>
+        <div>SPEED: <span id="speed-level" style="color: #ffcc00;">3</span> <span id="debug-label" style="color:red; display:none;">(D)</span></div>
+        <div>MISSILE: <span id="m-stock" style="color: #ffcc00;">0</span></div>
         <div>SCORE: <span id="score" style="color: #00FFCC;">0</span></div>
     </div>
 
     <div class="main-container">
         <canvas id="myCanvas" width="960" height="1600"></canvas>
         <div class="item-guide">
-            <h2 style="font-size: 14px; margin:0;">ITEMS</h2>
-            <p>R: Repair<br>M: Missile<br>L: Life (+1)<br>B: Ball x2<br>S-: Slow (20s)</p>
-            <div id="timer-box"><div id="timer-val">00s</div></div>
+            <h2 style="font-size: 18px; color: #00FFCC; margin-top: 0; border-bottom: 1px solid #444;">ITEM GUIDE</h2>
+            <div class="item-row"><div class="icon-box"><div class="missile-guide"></div></div><div><b>M: Missile</b><br>ミサイル(+5)</div></div>
+            <div class="item-row"><div class="icon-box"><div class="homebase-guide" style="display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:bold;">6</div></div><div><b>R: Repair</b><br>パーツを回復</div></div>
+            <div class="item-row"><div class="icon-box"><div class="heart-guide"></div></div><div><b>L: Life</b><br>残機+1</div></div>
+            <div class="item-row"><div class="icon-box" style="color:#ff0; border:2px solid #ff0; border-radius:50%; font-weight:bold; font-size:16px;">x2</div><div><b>B: Ball x2</b><br>ボール倍増</div></div>
+            <div class="item-row"><div class="icon-box" style="width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:24px solid #0f0;"></div><div><b>S+: Speed UP</b></div></div>
+            <div class="item-row"><div class="icon-box" style="width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:24px solid #fff;"></div><div><b>S-: Speed DOWN</b></div></div>
+            <div id="timer-box"><div style="font-size:11px; color:#f88;">SLOW TIMER</div><div id="timer-val">00s</div></div>
         </div>
     </div>
 
 <script>
     const canvas = document.getElementById("myCanvas");
     const ctx = canvas.getContext("2d");
-    // 各種Display要素の取得
     const scoreDisplay = document.getElementById("score");
     const livesDisplay = document.getElementById("lives");
     const ballCountDisplay = document.getElementById("ball-count");
@@ -76,70 +95,18 @@
     let audioCtx = null;
     let musicInterval = null;
 
-    function initAudio() { 
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); 
-    }
-
-    function playNote(freq, type, duration, volume = 0.1, startTime = 0) {
-        initAudio(); const t = audioCtx.currentTime + startTime;
-        const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
-        osc.type = type; osc.frequency.setValueAtTime(freq, t);
-        g.gain.setValueAtTime(volume, t); g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start(t); osc.stop(t + duration);
-    }
-
-    function playPoko() {
-        initAudio(); const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
-        osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
-        osc.frequency.exponentialRampToValueAtTime(400, now + 0.04);
-        g.gain.setValueAtTime(0.15, now); g.gain.linearRampToValueAtTime(0, now + 0.05);
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start(); osc.stop(now + 0.05);
-    }
-
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }
+    function playNote(freq, type, duration, volume = 0.1, startTime = 0) { initAudio(); const t = audioCtx.currentTime + startTime; const osc = audioCtx.createOscillator(); const g = audioCtx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, t); g.gain.setValueAtTime(volume, t); g.gain.exponentialRampToValueAtTime(0.0001, t + duration); osc.connect(g); g.connect(audioCtx.destination); osc.start(t); osc.stop(t + duration); }
+    function playPoko() { initAudio(); const now = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const g = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.04); g.gain.setValueAtTime(0.15, now); g.gain.linearRampToValueAtTime(0, now + 0.05); osc.connect(g); g.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.05); }
     function stopMusic() { if(musicInterval) { clearInterval(musicInterval); musicInterval = null; } }
-
-    function playRichClearBGM() {
-        stopMusic(); let counter = 0;
-        musicInterval = setInterval(() => {
-            const melody = [523, 0, 523, 587, 659, 0, 659, 698, 784, 0, 1046, 0, 784, 0, 659, 0];
-            const beat = counter % 16;
-            if (melody[beat] > 0) { playNote(melody[beat], 'triangle', 0.2, 0.06); playNote(melody[beat] * 0.75, 'triangle', 0.1, 0.03); }
-            if (beat % 4 === 0) playNote(261 / 2, 'square', 0.3, 0.02);
-            counter++;
-        }, 200);
-    }
-
-    function playSpecialBonusBGM() {
-        let counter = 0;
-        const melody = [1046, 1174, 1318, 1396, 1567, 1396, 1318, 1174, 1046, 1567, 2093, 0];
-        const fanFare = setInterval(() => {
-            if (counter < melody.length) {
-                if(melody[counter] > 0) playNote(melody[counter], 'sawtooth', 0.1, 0.05);
-                counter++;
-            } else { clearInterval(fanFare); }
-        }, 80);
-    }
-
-    function playGameOverBGM() {
-        stopMusic(); let counter = 0;
-        const melody = [392, 349, 329, 293, 261, 0];
-        musicInterval = setInterval(() => {
-            if (counter < melody.length) {
-                if(melody[counter] > 0) playNote(melody[counter], 'sine', 0.8, 0.1);
-                counter++;
-            } else { stopMusic(); }
-        }, 400);
-    }
+    function playRichClearBGM() { stopMusic(); let counter = 0; musicInterval = setInterval(() => { const melody = [523, 0, 523, 587, 659, 0, 659, 698, 784, 0, 1046, 0, 784, 0, 659, 0]; const beat = counter % 16; if (melody[beat] > 0) { playNote(melody[beat], 'triangle', 0.2, 0.06); playNote(melody[beat] * 0.75, 'triangle', 0.1, 0.03); } if (beat % 4 === 0) playNote(261 / 2, 'square', 0.3, 0.02); counter++; }, 200); }
+    function playSpecialBonusBGM() { let counter = 0; const melody = [1046, 1174, 1318, 1396, 1567, 1396, 1318, 1174, 1046, 1567, 2093, 0]; const fanFare = setInterval(() => { if (counter < melody.length) { if(melody[counter] > 0) playNote(melody[counter], 'sawtooth', 0.1, 0.05); counter++; } else { clearInterval(fanFare); } }, 80); }
+    function playGameOverBGM() { stopMusic(); let counter = 0; const melody = [392, 349, 329, 293, 261, 0]; musicInterval = setInterval(() => { if (counter < melody.length) { if(melody[counter] > 0) playNote(melody[counter], 'sine', 0.8, 0.1); counter++; } else { stopMusic(); } }, 400); }
 
     let totalScore = 0; let currentStageScore = 0; let lives = 3; let currentStage = 1; let maxReachedStage = 1;
     let speedLevel = 3; const speedMultipliers = [0, 0.5, 0.75, 1.0, 1.5, 2.0];
     let speedDownTimer = 0; let gameActive = false; let isResultMode = false; let isSelectMode = false;
-    let isDebugMode = false;
-    let resultState = 0; let displayStageScore = 0; let tempTotalScore = 0;
+    let isDebugMode = false; let resultState = 0; let displayStageScore = 0; let tempTotalScore = 0;
     let balls = []; let bricks = []; let activeItems = []; let inventoryMissiles = 0; let activeMissiles = [];
     const ballRadius = 24; let lastZoromeHP = 6; let lastStraightFlag = false;
     let paddleX = 330; let paddleParts = []; let paddlePrevX = 330; let paddleVelocity = 0;
@@ -177,10 +144,7 @@
         if(debugLabel) debugLabel.style.display = debug ? "inline" : "none";
         currentStageScore = 0; speedDownTimer = 0; inventoryMissiles = 0;
         resetBallAndPaddle();
-        if(debug) {
-            const hps = [1, 2, 3, 4, 6];
-            paddleParts.forEach((p, i) => p.hp = hps[i]);
-        }
+        if(debug) { const hps = [1, 2, 3, 4, 6]; paddleParts.forEach((p, i) => p.hp = hps[i]); }
         stageDisplay.innerHTML = stage; gameActive = true; isResultMode = false; isSelectMode = false;
     }
 
@@ -217,135 +181,83 @@
         let vAngle = (ball.dy < 0) ? -Math.PI / 2 : Math.PI / 2;
         let diff = angle - vAngle;
         const maxA = Math.PI / 6;
-        if (Math.abs(diff) > maxA) {
-            let newA = vAngle + (diff > 0 ? maxA : -maxA);
-            ball.dx = Math.cos(newA) * speed; ball.dy = Math.sin(newA) * speed;
-        }
+        if (Math.abs(diff) > maxA) { let newA = vAngle + (diff > 0 ? maxA : -maxA); ball.dx = Math.cos(newA) * speed; ball.dy = Math.sin(newA) * speed; }
     }
 
-    // --- 操作ロジック（PC & スマホ共通） ---
-    function handleMove(clientX) {
+    function handleMove(e) {
         if(!gameActive) return;
         const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const scaleX = 960 / rect.width;
         paddlePrevX = paddleX;
         paddleX = (clientX - rect.left) * scaleX - 150;
-        // 画面外へのはみ出し防止
         if (paddleX < -30) paddleX = -30;
         if (paddleX > 690) paddleX = 690;
         paddleVelocity = paddleX - paddlePrevX;
         balls.forEach(b => { if(b.attached) b.x = paddleX + 150; });
+        if(e.cancelable) e.preventDefault();
     }
 
-    function handleAction(clientX, clientY) {
+    function handleAction(e) {
         initAudio();
         const rect = canvas.getBoundingClientRect();
+        const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+        const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
         const mouseX = (clientX - rect.left) * (960 / rect.width);
         const mouseY = (clientY - rect.top) * (1600 / rect.height);
-
         if(isSelectMode) {
             for(let i=1; i<=maxReachedStage; i++) {
                 let by = 600 + (i-1)*100;
                 if(mouseX > 280 && mouseX < 680 && mouseY > by-40 && mouseY < by+40) { lives = 3; totalScore = 0; initLevel(i, false); return; }
             }
-        } else if(!gameActive && !isResultMode) {
-            isSelectMode = true;
-        } else if (isResultMode && resultState === 3) {
-            initLevel(currentStage + 1, isDebugMode);
-        } else if (gameActive) {
+        } else if(!gameActive && !isResultMode) { isSelectMode = true; } 
+        else if (isResultMode && resultState === 3) { initLevel(currentStage + 1, isDebugMode); } 
+        else if (gameActive) {
             let launched = false;
             balls.forEach(b => { if(b.attached) { b.attached = false; b.dx = 7; b.dy = -12; launched = true; }});
-            if(!launched) {
-                if(inventoryMissiles > 0 && activeMissiles.length < 2) {
-                    activeMissiles.push({ x: paddleX + 150, y: 1400 });
-                    inventoryMissiles--; missileStockDisplay.innerHTML = inventoryMissiles;
-                    balls.forEach(b => { b.face = 'angry'; b.faceTimer = 180; });
-                    playNote(150, 'sawtooth', 0.2, 0.1);
-                }
+            if(!launched && inventoryMissiles > 0 && activeMissiles.length < 2) {
+                activeMissiles.push({ x: paddleX + 150, y: 1400 }); inventoryMissiles--;
+                missileStockDisplay.innerHTML = inventoryMissiles; balls.forEach(b => { b.face = 'angry'; b.faceTimer = 180; });
+                playNote(150, 'sawtooth', 0.2, 0.1);
             }
         }
+        if(e.cancelable) e.preventDefault();
     }
 
-    // イベントリスナー登録
-    document.addEventListener("mousemove", (e) => handleMove(e.clientX));
-    document.addEventListener("mousedown", (e) => handleAction(e.clientX, e.clientY));
-    
-    // タッチイベント
-    document.addEventListener("touchmove", (e) => {
-        handleMove(e.touches[0].clientX);
-        e.preventDefault();
-    }, { passive: false });
-    
-    document.addEventListener("touchstart", (e) => {
-        handleAction(e.touches[0].clientX, e.touches[0].clientY);
-        e.preventDefault();
-    }, { passive: false });
-
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("mousedown", handleAction);
+    canvas.addEventListener("touchmove", handleMove, { passive: false });
+    canvas.addEventListener("touchstart", handleAction, { passive: false });
+    document.addEventListener("touchmove", (e) => { if(e.cancelable) e.preventDefault(); }, { passive: false });
     document.addEventListener("keydown", (e) => {
         if(e.code === "KeyD" && (!gameActive || isResultMode === false)) { totalScore = 0; lives = 3; initLevel(1, true); }
         if(e.code === "Space" && gameActive) {
             e.preventDefault(); let launched = false;
             balls.forEach(b => { if(b.attached) { b.attached = false; b.dx = 7; b.dy = -12; launched = true; }});
-            if(!launched) fireMissile();
+            if(!launched && inventoryMissiles > 0 && activeMissiles.length < 2) {
+                activeMissiles.push({ x: paddleX + 150, y: 1400 }); inventoryMissiles--; missileStockDisplay.innerHTML = inventoryMissiles;
+                balls.forEach(b => { b.face = 'angry'; b.faceTimer = 180; }); playNote(150, 'sawtooth', 0.2, 0.1);
+            }
         }
     });
 
-    // --- 描画ロジック ---
-    function drawMissileShape(x, y, scale = 1) {
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(x, y - 20*scale); ctx.lineTo(x - 8*scale, y - 5*scale); ctx.lineTo(x + 8*scale, y - 5*scale); ctx.fill();
-        ctx.fillStyle = "#f00"; ctx.fillRect(x - 8*scale, y - 5*scale, 16*scale, 20*scale);
-        ctx.fillStyle = "#f60"; ctx.beginPath(); ctx.moveTo(x - 8*scale, y + 5*scale); ctx.lineTo(x - 15*scale, y + 15*scale); ctx.lineTo(x - 8*scale, y + 15*scale); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x + 8*scale, y + 5*scale); ctx.lineTo(x + 15*scale, y + 15*scale); ctx.lineTo(x + 8*scale, y + 15*scale); ctx.fill();
-    }
-    function drawHeart(x, y, scale = 1) {
-        ctx.fillStyle = "#f36"; ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 4);
-        let s = 15 * scale; ctx.fillRect(-s/2, -s/2, s, s); ctx.beginPath(); ctx.arc(0, -s/2, s/2, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(s/2, 0, s/2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    }
-    function drawHomeBase(x, y, scale = 1) {
-        let w = 36 * scale; let h = 28 * scale; let tip = 15 * scale;
-        ctx.fillStyle = "#f00"; ctx.beginPath(); ctx.moveTo(x - w/2, y - h/2); ctx.lineTo(x + w/2, y - h/2); ctx.lineTo(x + w/2, y + h/2); ctx.lineTo(x, y + h/2 + tip); ctx.lineTo(x - w/2, y + h/2); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "#fff"; ctx.font = `bold ${18*scale}px Arial`; ctx.textAlign = "center"; ctx.fillText("6", x, y + h/4);
-    }
-    function drawBallFace(b) {
-        ctx.beginPath(); ctx.arc(b.x, b.y, ballRadius, 0, Math.PI*2); ctx.fillStyle = "#FFD700"; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 18px Arial";
-        const faces = { happy:'(^o^)', angry:'( ｀皿´)', reset:'(・6・)', double:'(・w・)', sweat:'(・_・;)', smile:'(・▽・)' };
-        ctx.fillText(faces[b.face] || "(・_・)", b.x, b.y + 7);
-    }
+    function drawMissileShape(x, y, scale = 1) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(x, y - 20*scale); ctx.lineTo(x - 8*scale, y - 5*scale); ctx.lineTo(x + 8*scale, y - 5*scale); ctx.fill(); ctx.fillStyle = "#f00"; ctx.fillRect(x - 8*scale, y - 5*scale, 16*scale, 20*scale); ctx.fillStyle = "#f60"; ctx.beginPath(); ctx.moveTo(x - 8*scale, y + 5*scale); ctx.lineTo(x - 15*scale, y + 15*scale); ctx.lineTo(x - 8*scale, y + 15*scale); ctx.fill(); ctx.beginPath(); ctx.moveTo(x + 8*scale, y + 5*scale); ctx.lineTo(x + 15*scale, y + 15*scale); ctx.lineTo(x + 8*scale, y + 15*scale); ctx.fill(); }
+    function drawHeart(x, y, scale = 1) { ctx.fillStyle = "#f36"; ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 4); let s = 15 * scale; ctx.fillRect(-s/2, -s/2, s, s); ctx.beginPath(); ctx.arc(0, -s/2, s/2, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(s/2, 0, s/2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    function drawHomeBase(x, y, scale = 1) { let w = 36 * scale; let h = 28 * scale; let tip = 15 * scale; ctx.fillStyle = "#f00"; ctx.beginPath(); ctx.moveTo(x - w/2, y - h/2); ctx.lineTo(x + w/2, y - h/2); ctx.lineTo(x + w/2, y + h/2); ctx.lineTo(x, y + h/2 + tip); ctx.lineTo(x - w/2, y + h/2); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "#fff"; ctx.font = `bold ${18*scale}px Arial`; ctx.textAlign = "center"; ctx.fillText("6", x, y + h/4); }
+    function drawBallFace(b) { ctx.beginPath(); ctx.arc(b.x, b.y, ballRadius, 0, Math.PI*2); ctx.fillStyle = "#FFD700"; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 18px Arial"; const faces = { happy:'(^o^)', angry:'( ｀皿´)', reset:'(・6・)', double:'(・w・)', sweat:'(・_・;)', smile:'(・▽・)' }; ctx.fillText(faces[b.face] || "(・_・)", b.x, b.y + 7); }
 
     function drawResult() {
-        ctx.fillStyle = "rgba(0,0,0,0.95)"; ctx.fillRect(0, 0, 960, 1600);
-        ctx.textAlign = "center"; ctx.font = "70px Arial Black"; ctx.fillStyle = "#00FFCC"; ctx.fillText(message, 480, 500);
-        ctx.font = "40px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("STAGE SCORE:", 480, 700);
-        ctx.font = "80px Arial Black"; ctx.fillStyle = "#FFFF00"; ctx.fillText(displayStageScore, 480, 800);
-        ctx.font = "40px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("TOTAL SCORE:", 480, 950);
-        ctx.font = "80px Arial Black"; ctx.fillStyle = "#00FFCC"; ctx.fillText(tempTotalScore, 480, 1050);
-        let cSpeed = Math.max(1, Math.ceil(currentStageScore / 100)); 
-        if (resultState === 0) { if (displayStageScore < currentStageScore) { displayStageScore += cSpeed * 2; if (displayStageScore > currentStageScore) displayStageScore = currentStageScore; playNote(800, 'sine', 0.03, 0.03); } else { resultState = 1; setTimeout(() => { resultState = 2; }, 1000); }
-        } else if (resultState === 2) { if (tempTotalScore < totalScore + currentStageScore) { tempTotalScore += cSpeed * 2; if (tempTotalScore > totalScore + currentStageScore) tempTotalScore = totalScore + currentStageScore; playNote(1000, 'sine', 0.03, 0.03); } else { totalScore += currentStageScore; resultState = 3; playNote(1500, 'sine', 0.4, 0.1); }
-        } else if (resultState === 3) { ctx.font = "30px Arial"; ctx.fillStyle = "#aaa"; ctx.fillText("Tap to Next Stage", 480, 1250); }
+        ctx.fillStyle = "rgba(0,0,0,0.95)"; ctx.fillRect(0, 0, 960, 1600); ctx.textAlign = "center"; ctx.font = "70px Arial Black"; ctx.fillStyle = "#00FFCC"; ctx.fillText(message, 480, 500); ctx.font = "40px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("STAGE SCORE:", 480, 700); ctx.font = "80px Arial Black"; ctx.fillStyle = "#FFFF00"; ctx.fillText(displayStageScore, 480, 800); ctx.font = "40px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("TOTAL SCORE:", 480, 950); ctx.font = "80px Arial Black"; ctx.fillStyle = "#00FFCC"; ctx.fillText(tempTotalScore, 480, 1050);
+        let cSpd = Math.max(1, Math.ceil(currentStageScore / 100)); if (resultState === 0) { if (displayStageScore < currentStageScore) { displayStageScore += cSpd * 2; if (displayStageScore > currentStageScore) displayStageScore = currentStageScore; playNote(800, 'sine', 0.03, 0.03); } else { resultState = 1; setTimeout(() => { resultState = 2; }, 1000); } } else if (resultState === 2) { if (tempTotalScore < totalScore + currentStageScore) { tempTotalScore += cSpd * 2; if (tempTotalScore > totalScore + currentStageScore) tempTotalScore = totalScore + currentStageScore; playNote(1000, 'sine', 0.03, 0.03); } else { totalScore += currentStageScore; resultState = 3; playNote(1500, 'sine', 0.4, 0.1); } } else if (resultState === 3) { ctx.font = "30px Arial"; ctx.fillStyle = "#aaa"; ctx.fillText("Tap/Click to Next Stage", 480, 1250); }
     }
 
     function draw() {
         ctx.clearRect(0, 0, 960, 1600);
-        if(!gameActive && !isResultMode && !isSelectMode) {
-            ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, 0, 960, 1600);
-            ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.font = "80px Arial Black";
-            ctx.fillText("BREAKOUT", 480, 600);
-            ctx.font = "40px Arial"; ctx.fillText("Tap to Start", 480, 800);
-            requestAnimationFrame(draw); return;
-        }
-        if(isSelectMode) {
-            ctx.fillStyle = "rgba(0,0,0,0.95)"; ctx.fillRect(0, 0, 960, 1600);
-            ctx.textAlign = "center"; ctx.fillStyle = "#00FFCC"; ctx.font = "60px Arial Black";
-            ctx.fillText("SELECT STAGE", 480, 400);
-            for(let i=1; i<=maxReachedStage; i++) { ctx.fillStyle = "#222"; ctx.strokeStyle = "#fff"; ctx.fillRect(280, 560+(i-1)*100, 400, 80); ctx.strokeRect(280, 560+(i-1)*100, 400, 80); ctx.fillStyle = "#fff"; ctx.font = "40px Arial Bold"; ctx.fillText("STAGE " + i, 480, 615+(i-1)*100); }
-            requestAnimationFrame(draw); return;
-        }
+        if(!gameActive && !isResultMode && !isSelectMode) { ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, 0, 960, 1600); ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.font = "80px Arial Black"; ctx.fillText("BREAKOUT", 480, 600); ctx.font = "40px Arial"; ctx.fillText("Tap/Click to Start", 480, 800); requestAnimationFrame(draw); return; }
+        if(isSelectMode) { ctx.fillStyle = "rgba(0,0,0,0.95)"; ctx.fillRect(0, 0, 960, 1600); ctx.textAlign = "center"; ctx.fillStyle = "#00FFCC"; ctx.font = "60px Arial Black"; ctx.fillText("SELECT STAGE", 480, 400); for(let i=1; i<=maxReachedStage; i++) { ctx.fillStyle = "#222"; ctx.strokeStyle = "#fff"; ctx.fillRect(280, 560+(i-1)*100, 400, 80); ctx.strokeRect(280, 560+(i-1)*100, 400, 80); ctx.fillStyle = "#fff"; ctx.font = "40px Arial Bold"; ctx.fillText("STAGE " + i, 480, 615+(i-1)*100); } requestAnimationFrame(draw); return; }
         if(isResultMode) { drawResult(); requestAnimationFrame(draw); return; }
 
-        if (speedDownTimer > 0) { speedDownTimer--; let sec = Math.ceil(speedDownTimer / 60); timerBox.style.display = "block"; timerVal.innerHTML = sec + "s"; if(!isDebugMode) speedLevel = (sec >= 20) ? 1 : 2; } 
-        else { timerBox.style.display = "none"; if (!isDebugMode && speedLevel < 3) speedLevel = 3; }
+        if (speedDownTimer > 0) { speedDownTimer--; let sec = Math.ceil(speedDownTimer / 60); timerBox.style.display = "block"; timerVal.innerHTML = sec + "s"; if(!isDebugMode) speedLevel = (sec >= 20) ? 1 : 2; } else { timerBox.style.display = "none"; if (!isDebugMode && speedLevel < 3) speedLevel = 3; }
 
         let activeBricksCount = 0;
         for(let c=0; c<8; c++) {
@@ -360,9 +272,7 @@
         }
         activeMissiles.forEach((m, i) => { m.y -= 22; drawMissileShape(m.x, m.y, 1.5); if(m.y < -50) activeMissiles.splice(i, 1); });
         activeItems.forEach((it, i) => {
-            it.y += 6;
-            if(it.type === 1) drawMissileShape(it.x, it.y, 1.2); else if(it.type === 2) drawHomeBase(it.x, it.y, 1.2); else if(it.type === 3) drawHeart(it.x, it.y, 1.2);
-            else { ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; if(it.type === 4) { ctx.strokeStyle="#ff0"; ctx.arc(it.x, it.y, 22, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle="#ff0"; ctx.font="bold 18px Arial"; ctx.textAlign="center"; ctx.fillText("x2", it.x, it.y+7); } if(it.type === 5) { ctx.fillStyle="#0f0"; ctx.moveTo(it.x, it.y-25); ctx.lineTo(it.x-15, it.y); ctx.lineTo(it.x+15, it.y); ctx.fill(); } if(it.type === 6) { ctx.fillStyle="#fff"; ctx.moveTo(it.x, it.y+25); ctx.lineTo(it.x-15, it.y); ctx.lineTo(it.x+15, it.y); ctx.fill(); } ctx.closePath(); }
+            it.y += 6; if(it.type === 1) drawMissileShape(it.x, it.y, 1.2); else if(it.type === 2) drawHomeBase(it.x, it.y, 1.2); else if(it.type === 3) drawHeart(it.x, it.y, 1.2); else { ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; if(it.type === 4) { ctx.strokeStyle="#ff0"; ctx.arc(it.x, it.y, 22, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle="#ff0"; ctx.font="bold 18px Arial"; ctx.textAlign="center"; ctx.fillText("x2", it.x, it.y+7); } if(it.type === 5) { ctx.fillStyle="#0f0"; ctx.moveTo(it.x, it.y-25); ctx.lineTo(it.x-15, it.y); ctx.lineTo(it.x+15, it.y); ctx.fill(); } if(it.type === 6) { ctx.fillStyle="#fff"; ctx.moveTo(it.x, it.y+25); ctx.lineTo(it.x-15, it.y); ctx.lineTo(it.x+15, it.y); ctx.fill(); } ctx.closePath(); }
             if(it.y > 1450 && it.y < 1550 && it.x > paddleX && it.x < paddleX + 300) {
                 if(it.type === 1) { inventoryMissiles += 5; balls.forEach(b=>{b.face='angry'; b.faceTimer=180;}); }
                 if(it.type === 2) { let pIdx = Math.floor((it.x - paddleX) / 60); if(pIdx>=0 && pIdx<5) { paddleParts[pIdx].hp=6; lastZoromeHP=0; balls.forEach(b=>{b.face='reset'; b.faceTimer=180;}); playNote(1000, 'sine', 0.2); } }
@@ -373,26 +283,10 @@
             } else if(it.y > 1600) activeItems.splice(i, 1);
         });
         const mSpd = speedMultipliers[speedLevel];
-        paddleParts.forEach((p, i) => {
-            if(p.hp > 0) {
-                let px = paddleX + (i * 60); let py = 1450;
-                ctx.fillStyle = {6:"#F00", 5:"#F80", 4:"#FF0", 3:"#0F0", 2:"#0FF", 1:"#00F"}[p.hp];
-                ctx.fillRect(px, py, 60, 45); ctx.strokeRect(px, py, 60, 45);
-                ctx.fillStyle = (p.hp===4||p.hp===2)?"#000":"#fff"; ctx.font="bold 28px Arial"; ctx.textAlign="center"; ctx.fillText(p.hp, px + 30, py + 32);
-                balls.forEach(ball => { if(!ball.attached && ball.x > px && ball.x < px + 60 && ball.y + ballRadius > py && ball.y - ballRadius < py + 45) { ball.dy = -Math.abs(ball.dy); ball.dx += paddleVelocity * 0.2; applyAngleLimit(ball); p.hp--; playNote(400, 'sine', 0.1); checkZorome(); } });
-            }
-        });
-        balls.forEach((ball, i) => {
-            if(!ball.attached) {
-                ball.x += ball.dx * mSpd; ball.y += ball.dy * mSpd;
-                if(ball.x > 945 || ball.x < 15) ball.dx = -ball.dx; if(ball.y < 15) ball.dy = -ball.dy;
-                if(ball.y > 1600) { balls.splice(i, 1); if(balls.length === 0) { lives--; if(lives <= 0) { gameActive = false; playGameOverBGM(); } else resetBallAndPaddle(); } }
-            }
-            if(ball.faceTimer > 0) { ball.faceTimer--; if(ball.faceTimer === 0) ball.face = 'normal'; }
-            drawBallFace(ball);
-        });
+        paddleParts.forEach((p, i) => { if(p.hp > 0) { let px = paddleX + (i * 60); let py = 1450; ctx.fillStyle = {6:"#F00", 5:"#F80", 4:"#FF0", 3:"#0F0", 2:"#0FF", 1:"#00F"}[p.hp]; ctx.fillRect(px, py, 60, 45); ctx.strokeRect(px, py, 60, 45); ctx.fillStyle = (p.hp===4||p.hp===2)?"#000":"#fff"; ctx.font="bold 28px Arial"; ctx.textAlign="center"; ctx.fillText(p.hp, px + 30, py + 32); balls.forEach(ball => { if(!ball.attached && ball.x > px && ball.x < px + 60 && ball.y + ballRadius > py && ball.y - ballRadius < py + 45) { ball.dy = -Math.abs(ball.dy); ball.dx += paddleVelocity * 0.2; applyAngleLimit(ball); p.hp--; playNote(400, 'sine', 0.1); checkZorome(); } }); } });
+        balls.forEach((ball, i) => { if(!ball.attached) { ball.x += ball.dx * mSpd; ball.y += ball.dy * mSpd; if(ball.x > 945 || ball.x < 15) ball.dx = -ball.dx; if(ball.y < 15) ball.dy = -ball.dy; if(ball.y > 1600) { balls.splice(i, 1); if(balls.length === 0) { lives--; if(lives <= 0) { gameActive = false; playGameOverBGM(); } else resetBallAndPaddle(); } } } if(ball.faceTimer > 0) { ball.faceTimer--; if(ball.faceTimer === 0) ball.face = 'normal'; } drawBallFace(ball); });
         scoreDisplay.innerHTML = totalScore + currentStageScore; livesDisplay.innerHTML = lives; ballCountDisplay.innerHTML = balls.length; speedDisplay.innerHTML = speedLevel; missileStockDisplay.innerHTML = inventoryMissiles;
-        if(activeBricksCount === 0 || paddleParts.every(p => p.hp <= 0)) { currentStageScore += (activeBricksCount === 0 ? 1000 : 2000); message = (activeBricksCount === 0 ? "STAGE CLEAR!!" : "PERFECT PADDLE!!"); gameActive = false; isResultMode = true; resultState = 0; displayStageScore = 0; tempTotalScore = totalScore; playRichClearBGM(); }
+        if(activeBricksCount === 0 || (paddleParts.every(p => p.hp <= 0) && gameActive)) { currentStageScore += activeBricksCount === 0 ? 1000 : 2000; message = activeBricksCount === 0 ? "STAGE CLEAR!!" : "PERFECT PADDLE!!"; gameActive = false; isResultMode = true; resultState = 0; displayStageScore = 0; tempTotalScore = totalScore; playRichClearBGM(); }
         if(isScrolling) { ctx.font = "bold 60px Arial"; ctx.textAlign = "left"; if (scrollStroke) { ctx.strokeStyle = scrollStroke; ctx.lineWidth = 8; ctx.strokeText(scrollMsg, scrollX, 850); } ctx.fillStyle = scrollColor; ctx.fillText(scrollMsg, scrollX, 850); scrollX -= 12; if(scrollX < -2000) isScrolling = false; }
         if(bonusTimer > 0) { ctx.textAlign = "center"; ctx.font = "40px Arial Black"; ctx.fillStyle = "#FF0"; ctx.fillText(bonusMessage, 480, 600); ctx.font = "30px Arial Black"; ctx.fillStyle = "#fff"; ctx.fillText(bonusPointsText, 480, 660); bonusTimer--; }
         requestAnimationFrame(draw);
