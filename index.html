@@ -3,6 +3,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script>
+    // 画面の横幅が768px未満（スマホ・タブレット想定）ならモバイル版へリダイレクト
+    if (window.innerWidth < 768) {
+        window.location.href = "index6_m.html";
+    }
+</script>
     <title>BREAKOUT ULTIMATE - SMART RESULT</title>
     <style>
         body { 
