@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BREAKOUT ULTIMATE - MOBILE</title>
+    <style>
+        body { 
+            text-align: center; font-family: 'Arial Black', sans-serif; 
+            background: #000; color: #fff; margin: 0; padding: 0;
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
+            touch-action: none; -webkit-user-select: none;
+        }
+        /* スマホ用ステータス（上部） */
+        .mobile-header {
+            display: flex; justify-content: space-around; align-items: center;
+            background: #222; padding: 10px 5px; font-size: 12px; border-bottom: 2px solid #444;
+        }
+        .score-box { color: #00FFCC; font-size: 18px; }
+
+        .game-container {
+            position: relative; flex-grow: 1; display: flex; justify-content: center; align-items: center;
+            background: #000; overflow: hidden;
+        }
+        canvas { 
+            background: radial-gradient(circle, #111 0%, #000 100%);
+            border: 2px solid #444; max-width: 100%; max-height: 100%;
+            aspect-ratio: 960 / 1600; touch-action: none;
+        }
+
+        /* スマホ用操作パネル（下部） */
+        .controls {
+            height: 120px; background: #111; display: flex; align-items: center; justify-content: space-around;
+            padding: 10px; border-top: 2px solid #444;
+        }
+        .touch-btn {
+            width: 80px; height: 80px; background: #333; border: 2px solid #666; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 30px; color: #fff;
+        }
+        #timer-pill {
+            position: absolute; top: 20px; right: 20px; padding: 8px 15px;
+            background: #333; border: 2px solid #fff; border-radius: 20px; font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-header">
+        <div>LIFE: <span id="lives" style="color: #f36;">3</span></div>
+        <div class="score-box">SCORE: <span id="score">0</span></div>
+        <div>STAGE: <span id="stage">1</span></div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="myCanvas" width="960" height="1600"></canvas>
+        <div id="timer-pill" style="display:none;">00s</div>
+    </div>
+
+    <div class="controls">
+        <div class="touch-btn" id="btn-left">◀</div>
+        <div style="font-size:10px; color:#666;">DRAG TO MOVE</div>
+        <div class="touch-btn" id="btn-right">▶</div>
+    </div>
+
+<script>
+    const canvas = document.getElementById("myCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("score");
+    const livesDisplay = document.getElementById("lives");
+    const stageDisplay = document.getElementById("stage");
+    const timerPill = document.getElementById("timer-pill");
+
+    let audioCtx = null, isPaused = false, debugMode = false;
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+    function playNote(freq, type, duration, volume = 0.1, startTime = 0) { if(isPaused) return; initAudio(); const t = audioCtx.currentTime + startTime; const osc = audioCtx.createOscillator(); const g = audioCtx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, t); g.gain.setValueAtTime(volume, t); g.gain.exponentialRampToValueAtTime(0.0001, t + duration); osc.connect(g); g.connect(audioCtx.destination); osc.start(t); osc.stop(t + duration); }
+    function playExplosion() { if(isPaused) return; initAudio(); const t = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const g = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.3); g.gain.setValueAtTime(0.15, t); g.gain.linearRampToValueAtTime(0, t + 0.3); osc.connect(g); g.connect(audioCtx.destination); osc.start(); osc.stop(t + 0.3); }
+    function playPokoMulti(multiplier) { if(isPaused) return; initAudio(); const baseFreq = multiplier === 4 ? 1800 : (multiplier === 2 ? 1200 : 800); playNote(baseFreq, 'sine', 0.05, 0.1); }
+    
+    let slowLevel = 0, slowTimer = 0, speedUpLevel = 0, speedUpTimer = 0;
+    function getCombinedSpeedMult() {
+        if (slowLevel === 1) return 0.7; if (slowLevel === 2) return 0.4;
+        if (speedUpLevel === 1) return 1.5; if (speedUpLevel === 2) return 2.0;
+        return 1.0;
+    }
+
+    let totalScore = 0, currentStageScore = 0, lives = 3, currentStage = 1, maxReachedStage = 1;
+    let speedLevel = 3; const speedMultipliers = [0, 0.5, 0.75, 1.0, 1.5, 2.0], BASE_BALL_SPEED = 14; 
+    let gameActive = false, isResultMode = false, isSelectMode = true, isGameOver = false, resultState = 0, displayStageScore = 0, tempTotalScore = 0;
+    let balls = [], bricks = [], activeItems = [], inventoryMissiles = 0, activeMissiles = [], particles = [];
+    let bonusMessage = "", bonusTimer = 0, brickDestroyCount = 0, targetNumber = null, targetDisplayTimer = 0, isTargetActive = false;
+    const ballRadius = 18; let paddleX = 330, paddleParts = [], paddleVelocity = 0, paddlePrevX = 330;
+    const paddleColors = {6:"#F00", 5:"#F80", 4:"#FF0", 3:"#0F0", 2:"#0FF", 1:"#00F"};
+
+    function createBricks(stage) {
+        let newBricks = [];
+        for(let c=0; c<8; c++) {
+            newBricks[c] = [];
+            for(let r=0; r<12; r++) {
+                let status = 0;
+                switch(stage) {
+                    case 1: status = (r < 5) ? 1 : 0; break;
+                    case 2: status = (c%2 === r%2 && r < 8) ? 1 : 0; break;
+                    default: status = (r < 6) ? 1 : 0;
+                }
+                newBricks[c][r] = { status, item: (status && Math.random() < 0.2) ? Math.floor(Math.random()*6)+1 : 0 };
+            }
+        }
+        return newBricks;
+    }
+
+    function initLevel(stage) {
+        currentStage = stage; bricks = createBricks(stage); currentStageScore = 0; inventoryMissiles = 0;
+        resetBallAndPaddle(); gameActive = true; isSelectMode = false; isResultMode = false; isGameOver = false; resultState = 0;
+        stageDisplay.innerHTML = stage;
+    }
+
+    function resetBallAndPaddle() { 
+        slowLevel = 0; slowTimer = 0; speedUpLevel = 0; speedUpTimer = 0;
+        balls = [{ x: 480, y: 1420, dx: 7, dy: -BASE_BALL_SPEED, attached: true }];
+        paddleParts = []; for(let i=0; i<5; i++) paddleParts.push({ hp: 6 });
+    }
+
+    function applySlowAllBalls() { balls.forEach(b => { if(!b.attached) { let s = Math.hypot(b.dx, b.dy); let t = BASE_BALL_SPEED * speedMultipliers[speedLevel] * getCombinedSpeedMult(); b.dx = (b.dx/s)*t; b.dy = (b.dy/s)*t; } }); }
+
+    // スマホ用タッチ操作
+    canvas.addEventListener("touchstart", (e) => {
+        initAudio();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const mx = (touch.clientX - rect.left) * (960 / rect.width);
+        const my = (touch.clientY - rect.top) * (1600 / rect.height);
+
+        if(isSelectMode) {
+            for(let i=1; i<=10; i++) {
+                let r = Math.floor((i-1)/5), c = (i-1)%5, bx = 180 + c*150, by = 600 + r*150;
+                if(mx > bx-60 && mx < bx+60 && my > by-60 && my < by+60) { initLevel(i); return; }
+            }
+        } else if(gameActive) {
+            let b = balls.find(ball => ball.attached);
+            if(b) { b.attached = false; applySlowAllBalls(); }
+            else if(inventoryMissiles > 0) { activeMissiles.push({ x: paddleX + 150, y: 1400 }); inventoryMissiles--; }
+        } else if(isResultMode && resultState === 6) { totalScore = tempTotalScore; if(currentStage < 10) initLevel(currentStage + 1); else isSelectMode = true; }
+    });
+
+    canvas.addEventListener("touchmove", (e) => {
+        if(!gameActive || isSelectMode) return;
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const mx = (touch.clientX - rect.left) * (960 / rect.width);
+        paddlePrevX = paddleX;
+        paddleX = Math.min(Math.max(mx - 150, 0), 660);
+        paddleVelocity = paddleX - paddlePrevX;
+        balls.forEach(b => { if (b.attached) b.x = paddleX + 150; });
+        e.preventDefault();
+    }, {passive: false});
+
+    function drawBallFace(b) {
+        ctx.save(); ctx.translate(b.x, b.y);
+        let ballColor = "#FFF";
+        if (slowLevel === 2) ballColor = "#00A0FF"; else if (slowLevel === 1) ballColor = "#00FF00";
+        else if (speedUpLevel === 2) ballColor = "#F00"; else if (speedUpLevel === 1) ballColor = "#FF8C00";
+        ctx.beginPath(); ctx.arc(0, 0, ballRadius, 0, Math.PI*2); ctx.fillStyle = ballColor; ctx.fill();
+        ctx.strokeStyle = "#000"; ctx.stroke(); ctx.restore();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, 960, 1600);
+        if(isSelectMode) {
+            ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0,0,960,1600);
+            ctx.fillStyle = "#0FF"; ctx.font = "60px Arial Black"; ctx.textAlign = "center"; ctx.fillText("SELECT STAGE", 480, 400);
+            for(let i=1; i<=10; i++) {
+                let r = Math.floor((i-1)/5), c = (i-1)%5, bx = 180 + c*150, by = 600 + r*150;
+                ctx.fillStyle = "#333"; ctx.fillRect(bx-60, by-60, 120, 120);
+                ctx.fillStyle = "#fff"; ctx.font = "40px Arial"; ctx.fillText(i, bx, by+15);
+            }
+        } else if(gameActive) {
+            if(!isPaused) {
+                if (slowTimer > 0) { slowTimer--; if(slowTimer==0) slowLevel=0; applySlowAllBalls(); }
+                if (speedUpTimer > 0) { speedUpTimer--; if(speedUpTimer==0) speedUpLevel=0; applySlowAllBalls(); }
+                
+                let curT = Math.max(slowTimer/60, speedUpTimer/60);
+                if(curT > 0) { timerPill.style.display="block"; timerPill.innerHTML = Math.ceil(curT)+"s"; }
+                else timerPill.style.display="none";
+
+                // ボール移動 & 衝突 (簡易版ロジックをスマホ用に適用)
+                balls.forEach((ball, i) => {
+                    if(!ball.attached) {
+                        ball.x += ball.dx; ball.y += ball.dy;
+                        if(ball.x < 20 || ball.x > 940) ball.dx *= -1;
+                        if(ball.y < 20) ball.dy *= -1;
+                        if(ball.y > 1600) { balls.splice(i,1); if(balls.length==0) { lives--; if(lives<=0) isGameOver=true; else resetBallAndPaddle(); } }
+                        
+                        // パドル衝突
+                        if(ball.y > 1430 && ball.y < 1480 && ball.x > paddleX && ball.x < paddleX+300) {
+                            ball.dy = -Math.abs(ball.dy); ball.dx += paddleVelocity * 0.2;
+                            let pIdx = Math.floor((ball.x - paddleX)/60);
+                            if(pIdx>=0 && pIdx<5) paddleParts[pIdx].hp--;
+                            playNote(400, 'sine', 0.1);
+                        }
+                    }
+                    drawBallFace(ball);
+                });
+            }
+
+            // パドル描画
+            paddleParts.forEach((p, i) => {
+                if(p.hp > 0) {
+                    let px = paddleX + i*60;
+                    ctx.fillStyle = paddleColors[p.hp]; ctx.fillRect(px, 1450, 60, 45);
+                    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeText(p.hp, px+30, 1482);
+                    ctx.fillStyle = "#fff"; ctx.font = "bold 28px Arial"; ctx.textAlign="center"; ctx.fillText(p.hp, px+30, 1482);
+                }
+            });
+
+            // ブロック描画
+            bricks.forEach((col, c) => col.forEach((b, r) => {
+                if(b.status) {
+                    let bx = c*115+30, by = r*55+150;
+                    ctx.fillStyle = `hsl(${c*40}, 70%, 50%)`; ctx.fillRect(bx, by, 100, 40);
+                    // ボールとの衝突
+                    balls.forEach(ball => {
+                        if(!ball.attached && ball.x > bx && ball.x < bx+100 && ball.y > by && ball.y < by+40) {
+                            b.status = 0; ball.dy *= -1; totalScore += 10;
+                            if(b.item) activeItems.push({x: bx+50, y: by+20, type: b.item});
+                        }
+                    });
+                }
+            }));
+
+            // アイテム移動
+            activeItems.forEach((it, i) => {
+                it.y += 5; ctx.fillStyle = it.type == 6 ? "#0f0" : "#ff0"; ctx.fillRect(it.x-15, it.y-15, 30, 30);
+                if(it.y > 1450 && it.y < 1500 && it.x > paddleX && it.x < paddleX+300) {
+                    if(it.type == 6) { slowLevel = 1; slowTimer = 600; }
+                    if(it.type == 5) { speedUpLevel = 1; speedUpTimer = 600; }
+                    activeItems.splice(i, 1); applySlowAllBalls();
+                }
+            });
+        }
+
+        scoreDisplay.innerHTML = totalScore;
+        livesDisplay.innerHTML = lives;
+        requestAnimationFrame(draw);
+    }
+    draw();
+</script>
+</body>
+</html>
