@@ -2,47 +2,48 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script>
-        // このファイル自体がモバイル用なのでリダイレクトは不要（ループ防止）
-    </script>
-    <title>BREAKOUT ULTIMATE - SMART RESULT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BREAKOUT ULTIMATE - MOBILE COMPLETE</title>
     <style>
         body { 
             text-align: center; font-family: 'Arial Black', sans-serif; 
-            background: #000; color: #fff; margin: 0; 
-            display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
-            touch-action: none; -webkit-user-select: none;
+            background: #000; color: #fff; margin: 0; padding: 0;
+            display: flex; flex-direction: column; height: 100vh;
+            overflow: hidden; touch-action: none; -webkit-user-select: none;
         }
+        /* メインコンテナ：スマホ画面に収まるよう高さを調整 */
         .main-container {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            flex-grow: 1; padding: 10px; gap: 10px; overflow: hidden; position: relative;
+            flex-grow: 1; padding: 5px; gap: 5px; overflow: hidden;
         }
         canvas { 
             background: radial-gradient(circle, #111 0%, #000 100%);
             border: 2px solid #fff; border-radius: 5px;
-            max-width: 100%; max-height: 75vh; aspect-ratio: 960 / 1600;
-            touch-action: none;
+            max-width: 100%; max-height: 70vh; aspect-ratio: 960 / 1600;
+            touch-action: none; cursor: crosshair;
         }
+        /* ステータス表示をスマホ下部用に再配置 */
         .mobile-ui-container {
-            width: 100%; max-width: 960px; display: flex; flex-direction: row; gap: 10px; justify-content: center; padding: 5px;
+            width: 100%; max-width: 960px; display: flex; flex-direction: row; gap: 5px; justify-content: center; padding: 5px;
         }
         .status-box {
-            background: #222; padding: 10px; border-radius: 10px; border: 2px solid #444;
-            text-align: left; font-size: 14px; line-height: 1.4; flex: 1;
+            background: #222; padding: 8px; border-radius: 10px; border: 2px solid #444;
+            text-align: left; font-size: 11px; flex: 1;
         }
-        .status-item { margin-bottom: 5px; }
-        .score-val { font-size: 20px; color: #00FFCC; display: block; margin-bottom: 2px; }
-
+        .score-val { font-size: 16px; color: #00FFCC; display: block; }
         .item-guide {
-            background: #1a1a1a; padding: 10px;
-            border-radius: 10px; border: 2px solid #444; text-align: left;
-            font-family: sans-serif; font-size: 11px; line-height: 1.2; flex: 1;
+            background: #1a1a1a; padding: 8px; border-radius: 10px; border: 2px solid #444;
+            text-align: left; font-family: sans-serif; font-size: 9px; line-height: 1.1; flex: 1;
         }
-        .item-row { display: flex; align-items: center; margin-bottom: 5px; }
-        .icon-box { width: 25px; height: 25px; margin-right: 8px; flex-shrink: 0; display:flex; align-items:center; justify-content:center; }
-        #timer-box { margin-top: 10px; padding: 10px; background: #333; border: 2px solid #fff; border-radius: 5px; text-align: center; }
-        #timer-val { font-size: 24px; color: #ff0; font-weight: bold; }
+        #timer-box { margin-top: 5px; padding: 5px; background: #333; border: 1px solid #fff; border-radius: 5px; text-align: center; }
+        #timer-val { font-size: 16px; color: #ff0; font-weight: bold; }
+
+        /* スマホ専用操作補助ボタン（左右） */
+        .touch-controls {
+            width: 100%; height: 80px; display: flex; justify-content: space-around; align-items: center; 
+            background: #111; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .touch-btn { width: 45%; height: 60px; background: #444; border: 1px solid #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
     </style>
 </head>
 <body>
@@ -52,22 +53,20 @@
         <div class="mobile-ui-container">
             <div class="status-box">
                 <div class="status-item">SCORE<br><span id="score" class="score-val">0</span></div>
-                <div class="status-item">STAGE: <span id="stage" style="color: #fff;">1</span></div>
-                <div class="status-item">LIFE: <span id="lives" style="color: #ff3366;">3</span></div>
-                <div class="status-item">BALLS: <span id="ball-count" style="color: #fff;">1</span></div>
-                <div class="status-item">SPEED: <span id="speed-level" style="color: #ffcc00;">3</span></div>
+                <div class="status-item">STG: <span id="stage">1</span> | LIFE: <span id="lives">3</span></div>
+                <div class="status-item">BALL: <span id="ball-count">1</span> | SPD: <span id="speed-level">3</span></div>
             </div>
 
             <div class="item-guide">
-                <h2 style="font-size: 14px; color: #00FFCC; margin-top: 0; border-bottom: 1px solid #444;">ITEM</h2>
-                <div class="item-row"><div class="icon-box" style="width:10px; height:20px; background:#f00; border-top:6px solid #fff;"></div><div>M: Missile / R: Repair (6)</div></div>
-                <div class="item-row"><div class="icon-box" style="color:#f36; font-size:20px;">♥</div><div>L: Life +1</div></div>
-                <div class="item-row"><div class="icon-box" style="color:#ff0; border:2px solid #ff0; border-radius:50%; font-size:12px;">x2</div><div>B: Multi-Ball</div></div>
-                <div class="item-row"><div class="icon-box" style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid #ff8c00;"></div><div>S+: Speed UP</div></div>
-                <div class="item-row"><div class="icon-box" style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:18px solid #0f0;"></div><div>S-: Speed DOWN</div></div>
-                <div id="timer-box"><div id="timer-label" style="font-size:10px; color:#fff;">TIMER</div><div id="timer-val">00s</div></div>
+                <div>M: Missile / R: Repair (6) / ♥: Life</div>
+                <div>B: Multi / S+: Speed UP / S-: DOWN</div>
+                <div id="timer-box"><div id="timer-val">00s</div></div>
             </div>
         </div>
+    </div>
+    <div class="touch-controls">
+        <div class="touch-btn" id="btn-left">◀ LEFT</div>
+        <div class="touch-btn" id="btn-right">RIGHT ▶</div>
     </div>
 
 <script>
@@ -93,7 +92,12 @@
     function playGameOverBGM() { stopMusic(); let counter = 0; const melody = [392, 349, 329, 293, 261, 0]; musicInterval = setInterval(() => { if(isPaused) return; if (counter < melody.length) { if(melody[counter] > 0) playNote(melody[counter], 'sine', 0.8, 0.1); counter++; } else stopMusic(); }, 400); }
     function playZoromeSound(hp) { if(isPaused) return; const vol = 0.15; if (hp === 5) playNote(880, 'sine', 0.4, vol); else if (hp === 4) { playNote(880, 'sine', 0.15, vol, 0); playNote(880, 'sine', 0.4, vol, 0.2); } else if (hp === 3) { playNote(880, 'sine', 0.1, vol, 0); playNote(880, 'sine', 0.1, vol, 0.15); playNote(880, 'sine', 0.4, vol, 0.3); } else if (hp === 2) { playNote(880, 'sine', 0.08, vol, 0); playNote(880, 'sine', 0.08, vol, 0.12); playNote(880, 'sine', 0.08, vol, 0.24); playNote(880, 'sine', 0.4, vol, 0.36); } else if (hp === 1) { const tones = [523.25, 659.25, 783.99, 1046.50, 1318.51]; tones.forEach((freq, i) => playNote(freq, 'triangle', 0.5, 0.08, i * 0.08)); } }
 
-    let slowLevel = 0; let slowTimer = 0; let speedUpLevel = 0; let speedUpTimer = 0;
+    let slowLevel = 0; // 0 normal, 1 slow(0.7), 2 slow strong(0.4)
+    let slowTimer = 0; // seconds remaining
+
+    let speedUpLevel = 0;
+    let speedUpTimer = 0;
+
     function getCombinedSpeedMult() {
         let mult = 1.0;
         if (slowLevel === 1) mult = 0.7;
@@ -123,9 +127,15 @@
     let balls = [], bricks = [], activeItems = [], inventoryMissiles = 0, activeMissiles = [], particles = [];
     let bonusMessage = "", bonusPointsText = "", bonusTimer = 0;
     let pointUpMessage = "", pointUpTimer = 0, pointUpY = 800;
+
     let blockScore = 0, alignedBonus = 0, targetBonus = 0, straightBonus = 0;
     let dBlock = 0, dAligned = 0, dTarget = 0, dStraight = 0;
-    let brickDestroyCount = 0; let targetNumber = null; let targetDisplayTimer = 0; let isTargetActive = false;
+
+    let brickDestroyCount = 0;
+    let targetNumber = null;
+    let targetDisplayTimer = 0;
+    let isTargetActive = false;
+
     const ballRadius = 18; let lastZoromeHP = 0, lastStraightFlag = false, paddleX = 330, paddleParts = [], paddleVelocity = 0, paddlePrevX = 330, lastTapTime = 0;
 
     const MIN_DX_STUCK = 0.8;
@@ -175,7 +185,9 @@
     }
 
     function resetBallAndPaddle() { 
-        slowLevel = 0; slowTimer = 0; speedUpLevel = 0; speedUpTimer = 0; speedLevel = 3; speedDownTimer = 0;
+        slowLevel = 0; slowTimer = 0;
+        speedUpLevel = 0; speedUpTimer = 0;
+        speedLevel = 3; speedDownTimer = 0;
         balls = [{ x: 480, y: 1420, dx: 7, dy: -BASE_BALL_SPEED, attached: true, face: 'normal', faceTimer: 0, angle: 0, lastPaddleHit: -1, paddleCooldown: 0 }];
         activeItems = []; activeMissiles = []; paddleParts = []; for(let i=0; i<5; i++) paddleParts.push({ hp: 6 });
         lastStraightFlag = false; lastZoromeHP = 0;
@@ -254,6 +266,7 @@
         }
     }
 
+    // ハイブリッド操作（マウス移動とスライドを共通化）
     function handleMove(e) {
         if(!gameActive || isPaused || isSelectMode) return;
         const rect = canvas.getBoundingClientRect();
@@ -267,6 +280,7 @@
         if(e.cancelable && e.touches) e.preventDefault();
     }
 
+    // ハイブリッド操作（アクション）
     function handleAction(e) {
         initAudio();
         const rect = canvas.getBoundingClientRect();
@@ -285,16 +299,20 @@
                 }
             }
         } else if (isGameOver) {
-            isSelectMode = true; isGameOver = false; lives = 3; livesDisplay.innerHTML = lives;
+            isSelectMode = true; isGameOver = false;
+            lives = 3; livesDisplay.innerHTML = lives;
         } else if (gameActive) {
             let bAttached = balls.find(b => b.attached);
             if(bAttached) { 
-                bAttached.attached = false; bAttached.dx = 7; bAttached.dy = -BASE_BALL_SPEED; normalizeVelocity(bAttached);
+                bAttached.attached = false; 
+                bAttached.dx = 7; bAttached.dy = -BASE_BALL_SPEED; 
+                normalizeVelocity(bAttached);
             } else if(inventoryMissiles > 0) { 
                 activeMissiles.push({ x: paddleX + 150, y: 1400 }); inventoryMissiles--; 
             }
         } else if (isResultMode && resultState === 6) {
-            totalScore = tempTotalScore; if(currentStage < 10) initLevel(currentStage + 1); else isSelectMode = true;
+            totalScore = tempTotalScore;
+            if(currentStage < 10) initLevel(currentStage + 1); else isSelectMode = true;
         }
     }
 
@@ -302,14 +320,34 @@
 
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("touchmove", handleMove, { passive: false });
-    window.addEventListener("mousedown", handleAction);
-    window.addEventListener("touchstart", (e) => { handleAction(e); e.preventDefault(); }, { passive: false });
+    canvas.addEventListener("mousedown", handleAction);
+    canvas.addEventListener("touchstart", (e) => { handleAction(e); e.preventDefault(); }, { passive: false });
+    
+    // 操作ボタンのリスナー
+    let isBtnLeft = false, isBtnRight = false;
+    document.getElementById("btn-left").addEventListener("touchstart", (e) => { isBtnLeft = true; e.preventDefault(); });
+    document.getElementById("btn-left").addEventListener("touchend", () => isBtnLeft = false);
+    document.getElementById("btn-right").addEventListener("touchstart", (e) => { isBtnRight = true; e.preventDefault(); });
+    document.getElementById("btn-right").addEventListener("touchend", () => isBtnRight = false);
+
     window.addEventListener("keydown", (e) => {
         if(e.code === "Space") { togglePause(); e.preventDefault(); }
         if (e.code === "KeyD" || e.key === "d" || e.key === "D" || e.key === "し") {
             debugMode = true; totalScore = 0; lives = 3; isSelectMode = true; gameActive = false; isPaused = false; isGameOver = false; e.preventDefault();
         }
     });
+
+    function applyBallSpeed(mult) {
+        balls.forEach(ball => {
+            if (ball.attached) return;
+            const speed = Math.hypot(ball.dx, ball.dy);
+            const angle = Math.atan2(ball.dy, ball.dx);
+            if (ball.baseSpeed === undefined) ball.baseSpeed = speed;
+            const base = ball.baseSpeed;
+            ball.dx = Math.cos(angle) * base * mult;
+            ball.dy = Math.sin(angle) * base * mult;
+        });
+    }
 
     function drawBallFace(b) {
         ctx.save(); ctx.translate(b.x, b.y); if(!b.attached && !isPaused) b.angle += b.dx * 0.05; ctx.rotate(b.angle);
@@ -319,7 +357,10 @@
         else if (speedUpLevel === 2) ballColor = "#FF0000";
         else if (speedUpLevel === 1) ballColor = "#FF8C00";
         else {
-            if(speedLevel === 1) ballColor = "#00FFFF"; else if(speedLevel === 2) ballColor = "#00FF00"; else if(speedLevel === 4) ballColor = "#FFFF00"; else if(speedLevel === 5) ballColor = "#FF4500";
+            if(speedLevel === 1) ballColor = "#00FFFF";
+            else if(speedLevel === 2) ballColor = "#00FF00";
+            else if(speedLevel === 4) ballColor = "#FFFF00";
+            else if(speedLevel === 5) ballColor = "#FF4500";
         }
         ctx.beginPath(); ctx.arc(0, 0, ballRadius, 0, Math.PI*2); ctx.fillStyle = ballColor; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
         ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 18px Arial";
@@ -331,7 +372,7 @@
         ctx.save(); ctx.font = "bold " + size + "px Arial Black"; ctx.textAlign = "left";
         let label = "TARGET: "; let labelWidth = ctx.measureText(label).width; let numWidth = 0;
         for(let i=0; i<text.length; i++) numWidth += ctx.measureText(text[i]).width;
-        let startX = align === "center" ? x - (labelWidth + numWidth) / 2 : (align === "right" ? x - (labelWidth + numWidth) : x);
+        let startX = x; if(align === "center") startX = x - (labelWidth + numWidth) / 2; else if(align === "right") startX = x - (labelWidth + numWidth);
         ctx.fillStyle = "#0FF"; ctx.fillText(label, startX, y);
         let currentX = startX + labelWidth;
         for(let i=0; i<text.length; i++) { ctx.fillStyle = paddleColors[text[i]] || "#FFF"; ctx.fillText(text[i], currentX, y); currentX += ctx.measureText(text[i]).width; }
@@ -339,13 +380,14 @@
     }
 
     function drawHUD() {
-        if(isTargetActive && targetDisplayTimer <= 0) drawColorfulTarget(targetNumber, 930, 1570, 35, "right");
+        if(isTargetActive && targetDisplayTimer <= 0) { drawColorfulTarget(targetNumber, 930, 1570, 35, "right"); }
     }
 
     function drawTargetEffect() {
         if(!isTargetActive || targetDisplayTimer <= 0) return;
         ctx.save(); let progress = 1 - (targetDisplayTimer / 120);
-        drawColorfulTarget(targetNumber, 480 + (450 - 480) * progress, 800 + (770 - 800) * progress, 70 - (progress * 35), "center");
+        let curX = 480 + (450 - 480) * progress; let curY = 800 + (770 - 800) * progress; let fontSize = 70 - (progress * 35);
+        drawColorfulTarget(targetNumber, curX, curY, fontSize, "center");
         if(!isPaused) targetDisplayTimer--; ctx.restore();
     }
 
@@ -356,30 +398,32 @@
     function drawResult() {
         ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.95)"; ctx.fillRect(0, 0, 960, 1600);
         ctx.textAlign = "center"; ctx.font = "70px Arial Black"; ctx.fillStyle = "#FF8C00"; ctx.fillText(message, 480, 350);
-        let lines = [{label: "Block SCORE:", val: blockScore, dVal: dBlock, color: "#fff"}];
+        let lines = []; lines.push({label: "Block SCORE:", val: blockScore, dVal: dBlock, color: "#fff"});
         if(alignedBonus > 0) lines.push({label: "Aligned BONUS:", val: alignedBonus, dVal: dAligned, color: "#0F0"});
         if(targetBonus > 0) lines.push({label: "Target BONUS:", val: targetBonus, dVal: dTarget, color: "#0FF"});
         if(straightBonus > 0) lines.push({label: "Straight BONUS:", val: straightBonus, dVal: dStraight, color: "#F0F"});
-        lines.forEach((line, i) => { ctx.font = "35px Arial Black"; ctx.textAlign = "left"; ctx.fillStyle = line.color; ctx.fillText(line.label, 200, 500 + 70*i); ctx.textAlign = "right"; ctx.fillText(line.dVal, 760, 500 + 70*i); });
+        const startY = 500, gap = 70;
+        lines.forEach((line, i) => { ctx.font = "35px Arial Black"; ctx.textAlign = "left"; ctx.fillStyle = line.color; ctx.fillText(line.label, 200, startY + gap*i); ctx.textAlign = "right"; ctx.fillText(line.dVal, 760, startY + gap*i); });
         ctx.textAlign = "center"; ctx.font = "bold 55px Arial Black"; ctx.fillStyle = "#FFFF00"; ctx.fillText("STAGE SCORE: " + displayStageScore, 480, 1000);
         ctx.font = "bold 75px Arial Black"; ctx.fillStyle = "#00FFCC"; ctx.fillText("TOTAL SCORE", 480, 1150); ctx.fillText(tempTotalScore, 480, 1250);
-        let cSpd = 50; 
-        if (resultState === 0) { if(dBlock < blockScore) dBlock += cSpd; else resultState=1; }
-        else if (resultState === 1) { if(alignedBonus > 0 && dAligned < alignedBonus) dAligned += cSpd; else resultState=2; }
-        else if (resultState === 2) { if(targetBonus > 0 && dTarget < targetBonus) dTarget += cSpd; else resultState=3; }
-        else if (resultState === 3) { if(straightBonus > 0 && dStraight < straightBonus) dStraight += cSpd; else resultState=4; }
-        else if (resultState === 4) { if(displayStageScore < currentStageScore) displayStageScore += cSpd*2; else resultState=5; }
-        else if (resultState === 5) { if(tempTotalScore < totalScore + currentStageScore) tempTotalScore += cSpd*2; else resultState=6; }
+        let cSpd = 50; if (resultState === 0) { if(dBlock < blockScore) { dBlock += cSpd; if(dBlock>blockScore) dBlock=blockScore; playNote(1200, 'sine', 0.02, 0.03); } else resultState=1; }
+        else if (resultState === 1) { if(alignedBonus > 0 && dAligned < alignedBonus) { dAligned += cSpd; if(dAligned>alignedBonus) dAligned=alignedBonus; playNote(1200, 'sine', 0.02, 0.03); } else resultState=2; }
+        else if (resultState === 2) { if(targetBonus > 0 && dTarget < targetBonus) { dTarget += cSpd; if(dTarget>targetBonus) dTarget=targetBonus; playNote(1200, 'sine', 0.02, 0.03); } else resultState=3; }
+        else if (resultState === 3) { if(straightBonus > 0 && dStraight < straightBonus) { dStraight += cSpd; if(dStraight>straightBonus) dStraight=straightBonus; playNote(1200, 'sine', 0.02, 0.03); } else resultState=4; }
+        else if (resultState === 4) { if(displayStageScore < currentStageScore) { displayStageScore += cSpd*2; if(displayStageScore>currentStageScore) displayStageScore=currentStageScore; playNote(1400, 'sine', 0.03, 0.05); } else resultState=5; }
+        else if (resultState === 5) { let target = totalScore + currentStageScore; if(tempTotalScore < target) { tempTotalScore += cSpd*2; if(tempTotalScore>target) tempTotalScore=target; playNote(1600, 'sine', 0.03, 0.05); } else resultState=6; }
         ctx.restore();
     }
 
     function draw() {
         ctx.clearRect(0, 0, 960, 1600);
         if(isSelectMode) { ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.95)"; ctx.fillRect(0, 0, 960, 1600); ctx.textAlign = "center"; ctx.fillStyle = "#0FF"; ctx.font = "60px Arial Black"; ctx.fillText("SELECT STAGE", 480, 350); for(let i=1; i<=10; i++) { let rIdx = Math.floor((i-1)/5), colIdx = (i-1)%5, bx = 130 + colIdx*150, by = 600 + rIdx*150; ctx.fillStyle = i <= maxReachedStage ? "#222" : "#111"; ctx.strokeStyle = i <= maxReachedStage ? "#fff" : "#444"; ctx.fillRect(bx-60, by-60, 120, 120); ctx.strokeRect(bx-60, by-60, 120, 120); ctx.fillStyle = i <= maxReachedStage ? "#fff" : "#444"; ctx.font = "40px Arial Bold"; ctx.fillText(i, bx, by+15); } ctx.restore(); requestAnimationFrame(draw); return; }
-        if(isGameOver) { drawGameOver(); requestAnimationFrame(draw); return; }
+        if(isGameOver) { ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0, 0, 960, 1600); ctx.textAlign = "center"; ctx.font = "80px Arial Black"; ctx.fillStyle = "#F00"; ctx.fillText("GAME OVER", 480, 800); ctx.font = "40px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("TOTAL SCORE: " + totalScore, 480, 1000); ctx.restore(); requestAnimationFrame(draw); return; }
         if(isResultMode) { drawResult(); requestAnimationFrame(draw); return; }
 
         if(!isPaused) {
+            if(isBtnLeft) { paddlePrevX = paddleX; paddleX = Math.max(paddleX-14, 0); paddleVelocity = -14; }
+            if(isBtnRight) { paddlePrevX = paddleX; paddleX = Math.min(paddleX+14, 660); paddleVelocity = 14; }
             if (!draw._timerTick) draw._timerTick = 0; draw._timerTick++;
             if (draw._timerTick >= 60) {
                 draw._timerTick = 0;
@@ -387,8 +431,7 @@
                 if (speedUpTimer > 0) { speedUpTimer--; if (speedUpLevel === 2 && speedUpTimer <= 10) { speedUpLevel = 1; applySlowAllBalls(); } if (speedUpTimer === 0) { speedUpLevel = 0; applySlowAllBalls(); } }
             }
             timerVal.innerHTML = Math.max(slowTimer, speedUpTimer) + "s";
-            let bgColor = "#333";
-            if (speedUpLevel === 1) bgColor = "#FF8C00"; else if (speedUpLevel === 2) bgColor = "#FF0000"; else if (slowLevel === 1) bgColor = "#00FF00"; else if (slowLevel === 2) bgColor = "#00A0FF";
+            let bgColor = "#333"; if (speedUpLevel === 1) bgColor = "#FF8C00"; else if (speedUpLevel === 2) bgColor = "#FF0000"; else if (slowLevel === 1) bgColor = "#00FF00"; else if (slowLevel === 2) bgColor = "#00A0FF";
             timerBox.style.background = bgColor;
         }
 
@@ -397,10 +440,11 @@
             if(b.status) {
                 let bx = c*115+30, by = r*55+150; let brickColor = `hsl(${c*40 + r*5}, 60%, 50%)`; ctx.fillStyle = brickColor; ctx.fillRect(bx, by, 100, 40);
                 balls.forEach(ball => {
-                    if (!ball.attached && ball.x+ballRadius > bx && ball.x-ballRadius < bx+100 && ball.y+ballRadius > by && ball.y-ballRadius < by+40) {
-                        const brickCX = bx + 50; const brickCY = by + 20; const diffX = ball.x - brickCX; const diffY = ball.y - brickCY;
-                        if (Math.abs(diffX) / 50 > Math.abs(diffY) / 20) { ball.dx *= -1; ball.x = diffX > 0 ? bx + 100 + ballRadius : bx - ballRadius; } 
-                        else { ball.dy *= -1; ball.y = diffY > 0 ? by + 40 + ballRadius : by - ballRadius; }
+                    if (ball.attached) return;
+                    if (ball.x + ballRadius > bx && ball.x - ballRadius < bx + 100 && ball.y + ballRadius > by && ball.y - ballRadius < by + 40) {
+                        const brickCX = bx + 50, brickCY = by + 20, diffX = ball.x - brickCX, diffY = ball.y - brickCY;
+                        if (Math.abs(diffX) / 50 > Math.abs(diffY) / 20) { ball.dx *= -1; if (diffX > 0) ball.x = bx + 100 + ballRadius; else ball.x = bx - ballRadius; } 
+                        else { ball.dy *= -1; if (diffY > 0) ball.y = by + 40 + ballRadius; else ball.y = by - ballRadius; }
                         b.status = 0; blockScore += (10 * pm); brickDestroyCount++; if (brickDestroyCount === 10) generateTarget();
                         if (b.item) activeItems.push({ x: bx + 50, y: by + 20, type: b.item });
                         playPokoMulti(pm); checkGameEnd();
@@ -413,7 +457,7 @@
         activeItems.forEach((it, i) => {
             if(!isPaused) it.y += 6;
             if(it.type === 1) { ctx.fillStyle="#fff"; ctx.beginPath(); ctx.moveTo(it.x, it.y+20); ctx.lineTo(it.x-8, it.y+5); ctx.lineTo(it.x+8, it.y+5); ctx.fill(); ctx.fillStyle="#f00"; ctx.fillRect(it.x-8, it.y-15, 16, 20); }
-            else if(it.type === 2) { ctx.fillStyle="#f00"; ctx.fillRect(it.x-15, it.y-15, 30, 30); ctx.fillStyle="#fff"; ctx.font="bold 18px Arial"; ctx.textAlign="center"; ctx.fillText("6", it.x, it.y+7); }
+            else if(it.type === 2) { ctx.fillStyle="#f00"; ctx.beginPath(); ctx.moveTo(it.x-18, it.y-14); ctx.lineTo(it.x+18, it.y-14); ctx.lineTo(it.x+18, it.y+14); ctx.lineTo(it.x, it.y+24); ctx.lineTo(it.x-18, it.y+14); ctx.fill(); ctx.fillStyle="#fff"; ctx.font="bold 18px Arial"; ctx.textAlign="center"; ctx.fillText("6", it.x, it.y+7); }
             else if(it.type === 3) { ctx.fillStyle="#f36"; ctx.beginPath(); ctx.arc(it.x-8, it.y-8, 10, 0, Math.PI*2); ctx.arc(it.x+8, it.y-8, 10, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.moveTo(it.x-17, it.y-4); ctx.lineTo(it.x, it.y+15); ctx.lineTo(it.x+17, it.y-4); ctx.fill(); }
             else if(it.type === 4) { ctx.beginPath(); ctx.strokeStyle="#ff0"; ctx.lineWidth=2; ctx.arc(it.x, it.y, 22, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle="#ff0"; ctx.font="bold 16px Arial"; ctx.textAlign="center"; ctx.fillText("x2", it.x, it.y+5); }
             else if(it.type === 5) { ctx.fillStyle="#ff8c00"; ctx.beginPath(); ctx.moveTo(it.x, it.y-20); ctx.lineTo(it.x-15, it.y+5); ctx.lineTo(it.x+15, it.y+5); ctx.fill(); }
@@ -435,24 +479,23 @@
         activeMissiles.forEach((m, i) => { if(!isPaused) m.y -= 22; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.moveTo(m.x, m.y-20); ctx.lineTo(m.x-8, m.y-5); ctx.lineTo(m.x+8, m.y-5); ctx.fill(); ctx.fillStyle="#f00"; ctx.fillRect(m.x-8, m.y-5, 16, 20); if(m.y < 0) activeMissiles.splice(i, 1); });
         drawParticles();
         balls.forEach(ball => { ball._paddleHitThisFrame = false; if(ball.paddleCooldown > 0) ball.paddleCooldown--; });
-        paddleParts.forEach((p, i) => { if(p.hp > 0) { ctx.save(); let px = paddleX + i*60, py = 1450; ctx.fillStyle = paddleColors[p.hp]; ctx.fillRect(px, py, 60, 45); ctx.strokeRect(px, py, 60, 45); ctx.font="bold 28px Arial"; ctx.textAlign="center"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeText(p.hp, px+30, py+32); ctx.fillStyle="#fff"; ctx.fillText(p.hp, px+30, py+32); ctx.restore(); balls.forEach(ball => {
-                if(ball.attached) return;
-                if(ball.x + ballRadius > px && ball.x - ballRadius < px + 60 && ball.y + ballRadius > py && ball.y - ballRadius < py + 45) {
+        paddleParts.forEach((p, i) => { if(p.hp > 0) { 
+            ctx.save(); let px = paddleX + i*60, py = 1450; ctx.fillStyle = paddleColors[p.hp]; ctx.fillRect(px, py, 60, 45); ctx.strokeRect(px, py, 60, 45); 
+            ctx.font="bold 28px Arial"; ctx.textAlign="center"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeText(p.hp, px+30, py+32); ctx.fillStyle="#fff"; ctx.fillText(p.hp, px+30, py+32); ctx.restore(); 
+            balls.forEach(ball => {
+                if(!ball.attached && ball.x + ballRadius > px && ball.x - ballRadius < px + 60 && ball.y + ballRadius > py && ball.y - ballRadius < py + 45) {
                     if(!ball._paddleHitThisFrame && ball.paddleCooldown === 0 && ball.lastPaddleHit !== i) {
-                        const prevX = ball.x - ball.dx; const prevY = ball.y - ball.dy; const top = py; const bottom = py + 45;
-                        let hitSide = null;
-                        if (prevY + ballRadius <= top && ball.y + ballRadius > top) hitSide = "top";
-                        else if (prevY - ballRadius >= bottom && ball.y - ballRadius < bottom) hitSide = "bottom";
-                        else if (prevX + ballRadius <= px && ball.x + ballRadius > px) hitSide = "left";
-                        else hitSide = "right";
-                        if (!hitSide) { const penL = (ball.x + ballRadius) - px; const penR = (px + 60) - (ball.x - ballRadius); const penT = (ball.y + ballRadius) - top; const penB = bottom - (ball.y - ballRadius); const minPen = Math.min(penL, penR, penT, penB); if (minPen === penT) hitSide = "top"; else if (minPen === penB) hitSide = "bottom"; else if (minPen === penL) hitSide = "left"; else hitSide = "right"; }
+                        const prevX = ball.x - ball.dx, prevY = ball.y - ball.dy, top = py, bottom = py + 45;
+                        let hitSide = null; if (prevY + ballRadius <= top && ball.y + ballRadius > top) hitSide = "top"; else if (prevY - ballRadius >= bottom && ball.y - ballRadius < bottom) hitSide = "bottom"; else if (prevX + ballRadius <= px && ball.x + ballRadius > px) hitSide = "left"; else hitSide = "right";
+                        if (!hitSide) { const penL = (ball.x + ballRadius) - px, penR = (px + 60) - (ball.x - ballRadius), penT = (ball.y + ballRadius) - top, penB = bottom - (ball.y - ballRadius), minPen = Math.min(penL, penR, penT, penB); if (minPen === penT) hitSide = "top"; else if (minPen === penB) hitSide = "bottom"; else if (minPen === penL) hitSide = "left"; else hitSide = "right"; }
                         if (hitSide === "left") { ball.dx = -Math.abs(ball.dx); ball.x = px - ballRadius; } else if (hitSide === "right") { ball.dx = Math.abs(ball.dx); ball.x = px + 60 + ballRadius; } else if (hitSide === "top") { ball.dy = -Math.abs(ball.dy); ball.y = top - ballRadius; ball.dx += paddleVelocity * 0.4; } else { ball.dy = Math.abs(ball.dy); ball.y = bottom + ballRadius; }
                         normalizeVelocity(ball); applyAngleLimit(ball); p.hp--; ball.lastPaddleHit = i; ball._paddleHitThisFrame = true; ball.paddleCooldown = 2; playNote(400, 'sine', 0.1); checkBonuses(); checkGameEnd();
                     }
                 } else if (ball.lastPaddleHit === i) ball.lastPaddleHit = -1;
             }); } });
 
-        balls.forEach((ball, i) => { if(!ball.attached && !isPaused) { ball.x += ball.dx; ball.y += ball.dy;
+        balls.forEach((ball, i) => { if(!ball.attached && !isPaused) { 
+            ball.x += ball.dx; ball.y += ball.dy; 
             const MIN_DX = 0.5; if (Math.abs(ball.dx) < MIN_DX) { const speed = Math.hypot(ball.dx, ball.dy); ball.dx = (ball.x < 480 ? 1 : -1) * MIN_DX; ball.dy = Math.sign(ball.dy) * Math.sqrt(speed*speed - MIN_DX*MIN_DX); }
             if(ball.x < 24 || ball.x > 936) ball.dx *= -1; preventVerticalStuck(ball); if(ball.y < 24) ball.dy *= -1; 
             if(ball.y > 1600) { balls.splice(i, 1); if(balls.length === 0) { lives--; if(lives > 0) resetBallAndPaddle(); else triggerGameOver(); } } 
@@ -462,10 +505,9 @@
         if(bonusTimer > 0) { ctx.save(); ctx.textAlign = "center"; ctx.font = "40px Arial Black"; ctx.fillStyle = "#FF0"; ctx.fillText(bonusMessage, 480, 600); ctx.font = "30px Arial Black"; ctx.fillStyle = "#fff"; ctx.fillText(bonusPointsText, 480, 660); bonusTimer--; ctx.restore(); }
         if(pointUpTimer > 0) { ctx.save(); let alpha = pointUpTimer / 120; ctx.globalAlpha = alpha; ctx.textAlign = "center"; let size = 60 + (120 - pointUpTimer) * 0.5; ctx.font = "bold " + size + "px Arial Black"; ctx.fillStyle = speedUpLevel === 2 ? "#FF0000" : "#FF8C00"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 4; ctx.strokeText(pointUpMessage, 480, pointUpY); ctx.fillText(pointUpMessage, 480, pointUpY); if(!isPaused) { pointUpY -= 2; pointUpTimer--; } ctx.restore(); }
         drawHUD(); drawTargetEffect();
-        scoreDisplay.innerHTML = totalScore; livesDisplay.innerHTML = lives; ballCountDisplay.innerHTML = balls.length; stageDisplay.innerHTML = currentStage; speedDisplay.innerHTML = speedLevel;
+        scoreDisplay.innerHTML = totalScore + blockScore + alignedBonus + targetBonus + straightBonus; livesDisplay.innerHTML = lives; ballCountDisplay.innerHTML = balls.length; stageDisplay.innerHTML = currentStage; speedDisplay.innerHTML = speedLevel;
         requestAnimationFrame(draw);
     }
-    function drawGameOver() { ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0, 0, 960, 1600); ctx.textAlign = "center"; ctx.font = "80px Arial Black"; ctx.fillStyle = "#F00"; ctx.fillText("GAME OVER", 480, 600); ctx.font = "40px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("TOTAL SCORE: " + totalScore, 480, 800); ctx.restore(); }
     draw();
 </script>
 </body>
